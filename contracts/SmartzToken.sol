@@ -1,6 +1,7 @@
 pragma solidity 0.4.18;
 
-import 'zeppelin-solidity/contracts/token/StandardToken.sol';
+import 'mixbytes-solidity/contracts/token/CirculatingToken.sol';
+import 'mixbytes-solidity/contracts/token/MintableMultiownedToken.sol';
 
 
 /// @title Utility interface for approveAndCall token function.
@@ -19,17 +20,17 @@ interface IApprovalRecipient {
 }
 
 
-contract SmartzToken is StandardToken {
+contract SmartzToken is CirculatingToken, MintableMultiownedToken {
 
     event Burn(address indexed from, uint256 amount);
 
 
-    // PUBLIC
+    // PUBLIC FUNCTIONS
 
-    function SmartzToken() public {
-        totalSupply = INITIAL_SUPPLY;
-        balances[msg.sender] = INITIAL_SUPPLY;
-        Transfer(address(0), msg.sender, INITIAL_SUPPLY);
+    function SmartzToken(address[] _initialOwners, uint _signaturesRequired)
+        public
+        MintableMultiownedToken(_initialOwners, _signaturesRequired, address(0))
+    {
     }
 
     /**
@@ -68,11 +69,16 @@ contract SmartzToken is StandardToken {
     }
 
 
+    // ADMINISTRATIVE FUNCTIONS
+
+    function startCirculation() external onlyController returns (bool) {
+        return enableCirculation();
+    }
+
+
     // CONSTANTS
 
     string public constant name = "Smartz token";
     string public constant symbol = "SMTZ";
     uint8 public constant decimals = 18;
-
-    uint256 public constant INITIAL_SUPPLY = 100*1000*1000 * (10 ** uint256(decimals));
 }
