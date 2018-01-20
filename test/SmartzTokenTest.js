@@ -4,6 +4,7 @@ import {tokenUTest} from './utest/Token';
 import {l} from './helpers/debug';
 
 const SmartzToken = artifacts.require('SmartzToken.sol');
+const TestApprovalRecipient = artifacts.require('TestApprovalRecipient.sol');
 
 
 async function instantiate(role, initial_balances_map) {
@@ -30,4 +31,21 @@ contract('SmartzTokenTest', function(accounts) {
          it(name, fn);
     }
 
+    it('test approveAndCall', async function() {
+        const owner1 = accounts[0];
+        const owner2 = accounts[1];
+        const nobody = accounts[2];
+
+        const token = await SmartzToken.new({from: owner1});
+        const recipient = await TestApprovalRecipient.new(token.address, {from: nobody});
+
+        await token.transfer(owner2, web3.toWei(3, 'ether'), {from: owner1});
+
+        await token.approveAndCall(recipient.address, web3.toWei(1, 'ether'), '', {from: owner1});
+        assert((await recipient.m_bonuses(owner1)).eq(web3.toWei(1, 'ether')));
+
+        await token.approveAndCall(recipient.address, web3.toWei(1, 'ether'), '0x4041', {from: owner2});
+        assert((await recipient.m_bonuses(owner2)).eq(web3.toWei(2, 'ether')));
+        assert((await token.balanceOf(owner2)).eq(web3.toWei(2, 'ether')));
+    });
 });
