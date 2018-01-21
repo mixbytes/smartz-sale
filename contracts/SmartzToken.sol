@@ -62,9 +62,11 @@ contract SmartzToken is CirculatingToken, MintableMultiownedToken {
      *
      * By invoking this utility function token holder could do two things in one transaction: approve spending his
      * tokens and execute some external contract which spends them on token holder's behalf.
+     * It can't be known if _spender's invocation succeed or not.
+     * This function will throw if approval failed.
      */
     function approveAndCall(address _spender, uint256 _value, bytes _extraData) public {
-        approve(_spender, _value);
+        require(approve(_spender, _value));
         IApprovalRecipient(_spender).receiveApproval(msg.sender, _value, _extraData);
     }
 
