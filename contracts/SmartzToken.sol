@@ -81,6 +81,6 @@ contract SmartzToken is CirculatingToken, MintableMultiownedToken {
     // CONSTANTS
 
     string public constant name = "Smartz token";
-    string public constant symbol = "SMTZ";
+    string public constant symbol = "SMR";
     uint8 public constant decimals = 18;
 }
