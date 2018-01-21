@@ -27,6 +27,16 @@ contract SmartzToken is CirculatingToken, MintableMultiownedToken {
 
     // PUBLIC FUNCTIONS
 
+    /**
+     * @notice Constructs token.
+     *
+     * @param _initialOwners initial multi-signatures, see comment below
+     * @param _signaturesRequired quorum of multi-signatures
+     *
+     * Initial owners have power over the token contract only during bootstrap phase (early investments and token
+     * sales). After final token sale any control over the token removed by issuing detachControllerForever call.
+     * For lifecycle example please see test/SmartzTokenTest.js, 'test full lifecycle'.
+     */
     function SmartzToken(address[] _initialOwners, uint _signaturesRequired)
         public
         MintableMultiownedToken(_initialOwners, _signaturesRequired, address(0))
