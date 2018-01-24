@@ -3,6 +3,7 @@ pragma solidity 0.4.18;
 import 'zeppelin-solidity/contracts/token/ERC20.sol';
 import 'zeppelin-solidity/contracts/token/BasicToken.sol';
 
+import 'mixbytes-solidity/contracts/security/ArgumentsChecker.sol';
 import 'mixbytes-solidity/contracts/ownership/multiowned.sol';
 import 'mixbytes-solidity/contracts/token/MintableToken.sol';
 
@@ -19,13 +20,14 @@ import './IEmissionPartMinter.sol';
  *
  * See also SmartzTokenLifecycleManager.sol.
  */
-contract SmartzTokenEmissionPools is BasicToken, ERC20, multiowned, MintableToken {
+contract SmartzTokenEmissionPools is ArgumentsChecker, BasicToken, ERC20, multiowned, MintableToken {
 
 
     // PUBLIC FUNCTIONS
 
     function SmartzTokenEmissionPools(address[] _owners, uint _signaturesRequired, address _SMRMinter)
         public
+        validAddress(_SMRMinter)
         multiowned(_owners, _signaturesRequired)
     {
         m_SMRMinter = _SMRMinter;
@@ -35,6 +37,8 @@ contract SmartzTokenEmissionPools is BasicToken, ERC20, multiowned, MintableToke
     /// @notice mints specified percent of token emission to pool
     function mint(address _to, uint256 _amount)
         public
+        payloadSizeIs(32 * 2)
+        validAddress(_to)
         onlymanyowners(keccak256(msg.data))
     {
         require(_amount > 0 && _amount <= nonDistributedParts());
@@ -130,6 +134,8 @@ contract SmartzTokenEmissionPools is BasicToken, ERC20, multiowned, MintableToke
     function claimSMRFor(address _for)
         private
     {
+        assert(_for != address(0));
+
         require(0 != balances[_for]);
         if (m_tokensClaimed[_for])
             return;

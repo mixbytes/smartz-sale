@@ -2,6 +2,7 @@ pragma solidity 0.4.18;
 
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 
+import 'mixbytes-solidity/contracts/security/ArgumentsChecker.sol';
 import 'mixbytes-solidity/contracts/ownership/multiowned.sol';
 import 'mixbytes-solidity/contracts/token/MintableToken.sol';
 
@@ -11,7 +12,7 @@ import './SmartzToken.sol';
 
 
 /// @title Contract orchestrates minting of SMR tokens to various parties.
-contract SmartzTokenLifecycleManager is multiowned, IDetachable, MintableToken, IEmissionPartMinter {
+contract SmartzTokenLifecycleManager is ArgumentsChecker, multiowned, IDetachable, MintableToken, IEmissionPartMinter {
     using SafeMath for uint256;
 
     /**
@@ -47,6 +48,7 @@ contract SmartzTokenLifecycleManager is multiowned, IDetachable, MintableToken, 
 
     function SmartzTokenLifecycleManager(address[] _owners, uint _signaturesRequired, SmartzToken _SMR)
         public
+        validAddress(_SMR)
         multiowned(_owners, _signaturesRequired)
     {
         m_SMR = _SMR;
@@ -56,6 +58,8 @@ contract SmartzTokenLifecycleManager is multiowned, IDetachable, MintableToken, 
     /// @notice Mints tokens during public sales
     function mint(address _to, uint256 _amount)
         public
+        payloadSizeIs(32 * 2)
+        validAddress(_to)
         requiresState(State.MINTING2PUBLIC_SALES)
         onlyBy(m_sale)
     {
@@ -65,6 +69,8 @@ contract SmartzTokenLifecycleManager is multiowned, IDetachable, MintableToken, 
     /// @notice Mints tokens to predefined token pools after public sales
     function mintPartOfEmission(address to, uint part, uint partOfEmissionForPublicSales)
         public
+        payloadSizeIs(32 * 3)
+        validAddress(to)
         requiresState(State.MINTING2POOLS)
         onlyBy(m_pools)
     {
@@ -101,6 +107,8 @@ contract SmartzTokenLifecycleManager is multiowned, IDetachable, MintableToken, 
     /// @dev Sets the next sale contract
     function setSale(address sale)
         external
+        payloadSizeIs(32)
+        validAddress(sale)
         requiresState(State.MINTING2PUBLIC_SALES)
         onlymanyowners(keccak256(msg.data))
     {
@@ -110,6 +118,8 @@ contract SmartzTokenLifecycleManager is multiowned, IDetachable, MintableToken, 
     /// @dev Sets contract which is responsible for token pools accounting
     function setPools(address pools)
         external
+        payloadSizeIs(32)
+        validAddress(pools)
         requiresState(State.MINTING2PUBLIC_SALES)
         onlymanyowners(keccak256(msg.data))
     {
