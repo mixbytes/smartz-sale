@@ -6,7 +6,7 @@
 
 import expectThrow from '../helpers/expectThrow';
 import {l} from '../helpers/debug';
-import {assertBigNumberEqual} from '../helpers/func';
+import {assertBigNumberEqual} from '../helpers/asserts';
 import '../helpers/typeExt';
 
 
