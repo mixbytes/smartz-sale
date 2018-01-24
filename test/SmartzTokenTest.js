@@ -3,7 +3,7 @@
 import {tokenUTest} from './utest/Token';
 import {l} from './helpers/debug';
 import expectThrow from './helpers/expectThrow';
-import {assertBigNumberEqual} from './helpers/func';
+import {assertBigNumberEqual} from './helpers/asserts';
 
 const SmartzToken = artifacts.require('SmartzToken.sol');
 const TestApprovalRecipient = artifacts.require('TestApprovalRecipient.sol');

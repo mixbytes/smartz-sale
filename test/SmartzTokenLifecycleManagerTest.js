@@ -2,7 +2,7 @@
 
 import {l} from './helpers/debug';
 import expectThrow from './helpers/expectThrow';
-import {assertBigNumberEqual} from './helpers/func';
+import {assertBigNumberEqual} from './helpers/asserts';
 import {SMR, SMRE} from './helpers/smartz';
 
 const SmartzToken = artifacts.require('SmartzToken.sol');
