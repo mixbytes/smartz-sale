@@ -6,6 +6,7 @@
 
 import expectThrow from '../helpers/expectThrow';
 import {l} from '../helpers/debug';
+import {assertBigNumberEqual} from '../helpers/func';
 import '../helpers/typeExt';
 
 
@@ -52,11 +53,6 @@ export function tokenUTest(accounts, instantiate, settings) {
     // converts amount of token into token-wei (smallest token units)
     function TOK(amount) {
         return web3.toWei(amount, 'ether');
-    }
-
-    function assertBigNumberEqual(actual, expected, message=undefined) {
-        assert(actual.eq(expected), "{2}expected {0}, but got: {1}".format(expected, actual,
-            message ? message + ': ' : ''));
     }
 
 

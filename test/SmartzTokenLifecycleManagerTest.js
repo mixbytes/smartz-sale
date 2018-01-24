@@ -2,21 +2,12 @@
 
 import {l} from './helpers/debug';
 import expectThrow from './helpers/expectThrow';
+import {assertBigNumberEqual} from './helpers/func';
+import {SMR, SMRE} from './helpers/smartz';
 
 const SmartzToken = artifacts.require('SmartzToken.sol');
 const SmartzTokenLifecycleManager = artifacts.require('SmartzTokenLifecycleManager.sol');
 const SmartzTokenEmissionPools = artifacts.require('SmartzTokenEmissionPools.sol');
-
-
-// converts amount of SMR token into token-wei (smallest token units)
-function SMR(amount) {
-    return web3.toWei(amount, 'ether');
-}
-
-// converts amount of SMRE token into token-wei (smallest token units)
-function SMRE(amount) {
-    return amount * 100;
-}
 
 
 contract('SmartzTokenLifecycleManagerTest', function(accounts) {
@@ -44,8 +35,8 @@ contract('SmartzTokenLifecycleManagerTest', function(accounts) {
         await SMREToken.mint(role.early_investor, SMRE(10), {from: role.owner1});
 
         await LCManager.mint(role.investor, SMR(1200), {from: role.sale});
-        assert((await SMRToken.balanceOf(role.investor)).eq(SMR(1200)));
-        assert((await SMRToken.totalSupply()).eq(SMR(1200)));
+        assertBigNumberEqual(await SMRToken.balanceOf(role.investor), SMR(1200));
+        assertBigNumberEqual(await SMRToken.totalSupply(), SMR(1200));
 
         await SMREToken.mint(role.dev_fund, SMRE(40), {from: role.owner1});
 
@@ -54,8 +45,8 @@ contract('SmartzTokenLifecycleManagerTest', function(accounts) {
         await LCManager.setSalesFinished({from: role.owner1});
 
         await SMREToken.claimSMRforAll(100, {from: role.nobody});
-        assert((await SMRToken.balanceOf(role.early_investor)).eq(SMR(240)));
-        assert((await SMRToken.balanceOf(role.dev_fund)).eq(SMR(960)));
-        assert((await SMRToken.totalSupply()).eq(SMR(2400)));
+        assertBigNumberEqual(await SMRToken.balanceOf(role.early_investor), SMR(240));
+        assertBigNumberEqual(await SMRToken.balanceOf(role.dev_fund), SMR(960));
+        assertBigNumberEqual(await SMRToken.totalSupply(), SMR(2400));
     });
 });

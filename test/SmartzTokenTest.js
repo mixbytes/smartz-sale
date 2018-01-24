@@ -3,6 +3,7 @@
 import {tokenUTest} from './utest/Token';
 import {l} from './helpers/debug';
 import expectThrow from './helpers/expectThrow';
+import {assertBigNumberEqual} from './helpers/func';
 
 const SmartzToken = artifacts.require('SmartzToken.sol');
 const TestApprovalRecipient = artifacts.require('TestApprovalRecipient.sol');
@@ -63,11 +64,11 @@ contract('SmartzTokenTest', function(accounts) {
         const recipient = await TestApprovalRecipient.new(token.address, {from: nobody});
 
         await token.approveAndCall(recipient.address, SMTZ(1), '', {from: owner1});
-        assert((await recipient.m_bonuses(owner1)).eq(SMTZ(1)));
+        assertBigNumberEqual(await recipient.m_bonuses(owner1), SMTZ(1));
 
         await token.approveAndCall(recipient.address, SMTZ(1), '0x4041', {from: owner2});
-        assert((await recipient.m_bonuses(owner2)).eq(SMTZ(2)));
-        assert((await token.balanceOf(owner2)).eq(SMTZ(2)));    // 3 - 1
+        assertBigNumberEqual(await recipient.m_bonuses(owner2), SMTZ(2));
+        assertBigNumberEqual(await token.balanceOf(owner2), SMTZ(2));   // 3 - 1
     });
 
     it('test full lifecycle', async function() {
@@ -88,7 +89,7 @@ contract('SmartzTokenTest', function(accounts) {
 
         // early investment
         await token.mint(investor2, SMTZ(40), {from: owner1});
-        assert((await token.balanceOf(investor2)).eq(SMTZ(40)));
+        assertBigNumberEqual(await token.balanceOf(investor2), SMTZ(40));
         await expectThrow(token.transfer(nobody, SMTZ(1), {from: investor2}));  // can't sell yet
 
         // ok, now it's ico time
@@ -99,7 +100,7 @@ contract('SmartzTokenTest', function(accounts) {
 
         // minting by ico to an investor
         await token.mint(investor1, SMTZ(20), {from: ico});
-        assert((await token.balanceOf(investor1)).eq(SMTZ(20)));
+        assertBigNumberEqual(await token.balanceOf(investor1), SMTZ(20));
 
         await expectThrow(token.transfer(nobody, SMTZ(1), {from: investor1}));  // both investors..
         await expectThrow(token.transfer(nobody, SMTZ(1), {from: investor2}));  // ..can't sell yet
@@ -112,7 +113,7 @@ contract('SmartzTokenTest', function(accounts) {
         // now transfer is allowed
         await token.transfer(nobody, SMTZ(1), {from: investor1});
         await token.transfer(nobody, SMTZ(1), {from: investor2});
-        assert((await token.balanceOf(nobody)).eq(SMTZ(2)));
+        assertBigNumberEqual(await token.balanceOf(nobody), SMTZ(2));
 
         // and owners no longer have any power over the token contract
         await expectThrow(token.mint(investor1, SMTZ(20), {from: owner1}));
