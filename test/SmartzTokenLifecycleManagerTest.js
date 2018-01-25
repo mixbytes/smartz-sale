@@ -311,4 +311,36 @@ contract('SmartzTokenLifecycleManagerTest', function(accounts) {
         assertBigNumberEqual(await SMRToken.balanceOf(role.dev_fund), SMR(600));
         assertBigNumberEqual(await SMRToken.totalSupply(), SMR(2000));
     });
+
+    it('cant transfer SMR until sale is finished', async function() {
+        const [SMRToken, LCManager, SMREToken] = await instantiate();
+
+        await SMREToken.mint(role.early_investor, SMRE(10), {from: role.owner1});
+        await SMREToken.mint(role.dev_fund, SMRE(40), {from: role.owner1});
+
+        await LCManager.mint(role.investor, SMR(1200), {from: role.sale});
+
+        assertBigNumberEqual(await SMRToken.balanceOf(role.investor), SMR(1200));
+        await expectThrow(SMRToken.transfer(role.nobody, SMR(100), {from: role.investor}));
+        assertBigNumberEqual(await SMRToken.balanceOf(role.nobody), SMR(0));
+        assertBigNumberEqual(await SMRToken.balanceOf(role.investor), SMR(1200));
+
+        // end of public sales
+        await LCManager.detach({from: role.sale});
+        await LCManager.setSalesFinished({from: role.owner1});
+
+        assertBigNumberEqual(await SMRToken.balanceOf(role.investor), SMR(1200));
+        // cant transfer yet - distributing SMR to the pools
+        await expectThrow(SMRToken.transfer(role.nobody, SMR(100), {from: role.investor}));
+        assertBigNumberEqual(await SMRToken.balanceOf(role.nobody), SMR(0));
+        assertBigNumberEqual(await SMRToken.balanceOf(role.investor), SMR(1200));
+
+        await SMREToken.claimSMRforAll(100, {from: role.nobody});
+
+        assertBigNumberEqual(await SMRToken.balanceOf(role.investor), SMR(1200));
+        assertBigNumberEqual(await SMRToken.balanceOf(role.nobody), SMR(0));
+        await SMRToken.transfer(role.nobody, SMR(100), {from: role.investor});
+        assertBigNumberEqual(await SMRToken.balanceOf(role.nobody), SMR(100));
+        assertBigNumberEqual(await SMRToken.balanceOf(role.investor), SMR(1100));
+    });
 });

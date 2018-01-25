@@ -22,6 +22,8 @@ import './IEmissionPartMinter.sol';
  */
 contract SmartzTokenEmissionPools is ArgumentsChecker, BasicToken, ERC20, multiowned, MintableToken {
 
+    event Claimed(address indexed to, uint256 amount);
+
 
     // PUBLIC FUNCTIONS
 
@@ -148,6 +150,8 @@ contract SmartzTokenEmissionPools is ArgumentsChecker, BasicToken, ERC20, multio
         // If it's too early (not an appropriate SMR lifecycle stage, see SmartzTokenLifecycleManager),
         // m_SMRMinter will revert() and all changes to the state of this contract will be rolled back.
         IEmissionPartMinter(m_SMRMinter).mintPartOfEmission(_for, part, partOfEmissionForPublicSales);
+
+        Claimed(_for, part);
     }
 
 
