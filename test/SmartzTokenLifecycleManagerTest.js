@@ -71,11 +71,17 @@ contract('SmartzTokenLifecycleManagerTest', function(accounts) {
         assertBigNumberEqual(await SMRToken.balanceOf(role.investor), SMR(2200));
         assertBigNumberEqual(await SMRToken.balanceOf(role.investor2), SMR(300));
 
-        assertBigNumberEqual(await SMRToken.balanceOf(role.early_investor), SMR(750));
-        assertBigNumberEqual(await SMRToken.balanceOf(role.early_investor2), SMR(500));
+        const totalSupply = await SMRToken.totalSupply();
+        const early_investor_SMR = await SMRToken.balanceOf(role.early_investor);
+        const early_investor2_SMR = await SMRToken.balanceOf(role.early_investor2);
+
+        assertBigNumberEqual(early_investor_SMR, SMR(750));
+        assertBigNumberEqual(early_investor_SMR.mul(100).div(totalSupply), 15, "15% of total supply");
+        assertBigNumberEqual(early_investor2_SMR, SMR(500));
+        assertBigNumberEqual(early_investor2_SMR.mul(100).div(totalSupply), 10, "10% of total supply");
         assertBigNumberEqual(await SMRToken.balanceOf(role.dev_fund), SMR(1250));
 
-        assertBigNumberEqual(await SMRToken.totalSupply(), SMR(5000));
+        assertBigNumberEqual(totalSupply, SMR(5000));
     });
 
     it('test premature claiming is forbidden', async function() {
