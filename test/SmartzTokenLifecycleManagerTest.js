@@ -98,10 +98,10 @@ contract('SmartzTokenLifecycleManagerTest', function(accounts) {
         await expectThrow(SMREToken.claimSMR({from: role.early_investor}));
     });
 
-    it('cant claim if SMRE are not fully distributed', async function() {
+    it('claiming in case SMRE are not fully distributed', async function() {
         const [SMRToken, LCManager, SMREToken] = await instantiate();
 
-        await SMREToken.mint(role.early_investor, SMRE(10), {from: role.owner1});
+        await SMREToken.mint(role.early_investor, SMRE(20), {from: role.owner1});
 
         await LCManager.mint(role.investor, SMR(1200), {from: role.sale});
 
@@ -109,9 +109,12 @@ contract('SmartzTokenLifecycleManagerTest', function(accounts) {
         await LCManager.detach({from: role.sale});
         await LCManager.setSalesFinished({from: role.owner1});
 
-        await expectThrow(SMREToken.claimSMR({from: role.early_investor}));
-        await expectThrow(SMREToken.claimSMRforAll(100, {from: role.nobody}));
-        await expectThrow(SMREToken.claimSMR({from: role.early_investor}));
+        await SMREToken.claimSMR({from: role.early_investor});
+        await SMREToken.claimSMRforAll(100, {from: role.nobody});
+        await SMREToken.claimSMR({from: role.early_investor});
+
+        assertBigNumberEqual(await SMRToken.balanceOf(role.investor), SMR(1200));
+        assertBigNumberEqual(await SMRToken.balanceOf(role.early_investor), SMR(300));
     });
 
     it('cant mint to public after sales was finished', async function() {

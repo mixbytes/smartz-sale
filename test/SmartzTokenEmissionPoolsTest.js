@@ -27,7 +27,7 @@ contract('SmartzTokenEmissionPoolsTest', function(accounts) {
 
         async function checkNoIllegalMinting() {
             await expectThrow(SMREToken.mint(role.early_investor1, SMRE(0), {from: role.owner1}));
-            await expectThrow(SMREToken.mint(role.early_investor1, SMRE(51), {from: role.owner1}));
+            await expectThrow(SMREToken.mint(role.early_investor1, SMRE(100), {from: role.owner1}));
             for (const _from of [role.early_investor1, role.early_investor2, role.nobody]) {
                 await expectThrow(SMREToken.mint(role.early_investor1, SMRE(2), {from: _from}));
                 await expectThrow(SMREToken.mint(_from, SMRE(2), {from: _from}));
@@ -41,8 +41,7 @@ contract('SmartzTokenEmissionPoolsTest', function(accounts) {
         assertBigNumberEqual(await SMREToken.balanceOf(role.early_investor1), SMRE(7));
         assertBigNumberEqual(await SMREToken.totalSupply(), SMRE(7));
 
-        assertBigNumberEqual(await SMREToken.nonDistributedParts(), SMRE(43));
-        assert(! (await SMREToken.isDistributed()));
+        assertBigNumberEqual(await SMREToken.publiclyDistributedParts(), SMRE(93));
 
 
         await checkNoIllegalMinting();
@@ -51,8 +50,7 @@ contract('SmartzTokenEmissionPoolsTest', function(accounts) {
         assertBigNumberEqual(await SMREToken.balanceOf(role.early_investor2), SMRE(3));
         assertBigNumberEqual(await SMREToken.totalSupply(), SMRE(10));
 
-        assertBigNumberEqual(await SMREToken.nonDistributedParts(), SMRE(40));
-        assert(! (await SMREToken.isDistributed()));
+        assertBigNumberEqual(await SMREToken.publiclyDistributedParts(), SMRE(90));
 
 
         await checkNoIllegalMinting();
@@ -61,8 +59,7 @@ contract('SmartzTokenEmissionPoolsTest', function(accounts) {
         assertBigNumberEqual(await SMREToken.balanceOf(role.dev_fund), SMRE(40));
         assertBigNumberEqual(await SMREToken.totalSupply(), SMRE(50));
 
-        assertBigNumberEqual(await SMREToken.nonDistributedParts(), SMRE(0));
-        assert(await SMREToken.isDistributed());
+        assertBigNumberEqual(await SMREToken.publiclyDistributedParts(), SMRE(50));
 
         await checkNoIllegalMinting();
     });

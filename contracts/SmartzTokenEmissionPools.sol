@@ -43,11 +43,13 @@ contract SmartzTokenEmissionPools is ArgumentsChecker, BasicToken, ERC20, multio
         validAddress(_to)
         onlymanyowners(keccak256(msg.data))
     {
-        require(_amount > 0 && _amount <= nonDistributedParts());
+        require(!m_claimingIsActive);
+        require(_amount > 0 && _amount < publiclyDistributedParts());
 
         // record new holder to auxiliary structure
-        if (0 == balances[_to])
+        if (0 == balances[_to]) {
             m_holders.push(_to);
+        }
 
         totalSupply = totalSupply.add(_amount);
         balances[_to] = balances[_to].add(_amount);
@@ -55,15 +57,13 @@ contract SmartzTokenEmissionPools is ArgumentsChecker, BasicToken, ERC20, multio
         Transfer(address(0), _to, _amount);
         Mint(_to, _amount);
 
-        assert(totalSupply <= maxSupply);
+        assert(publiclyDistributedParts() > 0);
     }
 
     /// @notice get appropriate amount of SMR for msg.sender account
     function claimSMR()
         external
     {
-        require(isDistributed());
-
         claimSMRFor(msg.sender);
     }
 
@@ -71,7 +71,6 @@ contract SmartzTokenEmissionPools is ArgumentsChecker, BasicToken, ERC20, multio
     function claimSMRforAll(uint invocationsLimit)
         external
     {
-        require(isDistributed());
         require(unclaimedPoolsPresent());
 
         uint startingGas = msg.gas;
@@ -84,22 +83,18 @@ contract SmartzTokenEmissionPools is ArgumentsChecker, BasicToken, ERC20, multio
                 break;  // enough invocations for this call
         }
 
-        if (! unclaimedPoolsPresent())
+        if (! unclaimedPoolsPresent()) {
             // all tokens claimed - detaching
             IDetachable(m_SMRMinter).detach();
+        }
     }
 
 
     // VIEWS
 
     /// @dev amount of non-distributed SMRE
-    function nonDistributedParts() public view returns (uint) {
+    function publiclyDistributedParts() public view returns (uint) {
         return maxSupply.sub(totalSupply);
-    }
-
-    /// @dev checks if all SMRE were distributed
-    function isDistributed() public view returns (bool) {
-        return 0 == nonDistributedParts();
     }
 
     /// @dev are there parties which still have't received their SMR?
@@ -145,11 +140,15 @@ contract SmartzTokenEmissionPools is ArgumentsChecker, BasicToken, ERC20, multio
         m_tokensClaimed[_for] = true;
 
         uint part = balances[_for];
-        uint partOfEmissionForPublicSales = uint(percentOfPublicSales) * (uint(10) ** uint(decimals));
+        uint partOfEmissionForPublicSales = publiclyDistributedParts();
 
         // If it's too early (not an appropriate SMR lifecycle stage, see SmartzTokenLifecycleManager),
         // m_SMRMinter will revert() and all changes to the state of this contract will be rolled back.
         IEmissionPartMinter(m_SMRMinter).mintPartOfEmission(_for, part, partOfEmissionForPublicSales);
+
+        if (! m_claimingIsActive) {
+            m_claimingIsActive = true;
+        }
 
         Claimed(_for, part);
     }
@@ -170,6 +169,9 @@ contract SmartzTokenEmissionPools is ArgumentsChecker, BasicToken, ERC20, multio
     /// As they could do it manually, out-of-order, m_unclaimedHolderIdx is not enough.
     mapping(address => bool) public m_tokensClaimed;
 
+    /// @dev true iff SMRE->SMR conversion is active and SMRE will no longer be minted
+    bool public m_claimingIsActive = false;
+
 
     // CONSTANTS
 
@@ -177,10 +179,6 @@ contract SmartzTokenEmissionPools is ArgumentsChecker, BasicToken, ERC20, multio
     string public constant symbol = "SMRE";
     uint8 public constant decimals = 2;
 
-    /// @notice percent (without any fractional parts) of SMR tokens distributed to the public
-    /// (so this contract manages remaining 100 - percentOfPublicSales).
-    uint public constant percentOfPublicSales = 50;
-
     // @notice maximum amount of SMRE to be allocated, in smallest units (1/100 of percent)
-    uint public constant maxSupply = (uint(100) - percentOfPublicSales) * (uint(10) ** uint(decimals));
+    uint public constant maxSupply = uint(100) * (uint(10) ** uint(decimals));
 }
