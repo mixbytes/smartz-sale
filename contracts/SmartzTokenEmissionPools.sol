@@ -73,14 +73,20 @@ contract SmartzTokenEmissionPools is ArgumentsChecker, BasicToken, ERC20, multio
     {
         require(unclaimedPoolsPresent());
 
-        uint startingGas = msg.gas;
         uint invocations = 0;
+        uint maxGasPerInvocation = 0;
         while (unclaimedPoolsPresent() && ++invocations <= invocationsLimit) {
+            uint startingGas = msg.gas;
+
             claimSMRFor(m_holders[m_unclaimedHolderIdx++]);
 
-            uint avgGasPerInvocation = startingGas.sub(msg.gas).div(invocations);
-            if (avgGasPerInvocation.add(70000) > msg.gas)
+            uint gasPerInvocation = startingGas.sub(msg.gas);
+            if (gasPerInvocation > maxGasPerInvocation) {
+                maxGasPerInvocation = gasPerInvocation;
+            }
+            if (maxGasPerInvocation.add(70000) > msg.gas) {
                 break;  // enough invocations for this call
+            }
         }
 
         if (! unclaimedPoolsPresent()) {
