@@ -80,12 +80,34 @@ contract SmartzToken is CirculatingToken, MintableMultiownedToken {
         IApprovalRecipient(_spender).receiveApproval(msg.sender, _value, _extraData);
     }
 
+    /**
+     * @notice Wrapper over standard mint() that makes sure uncontrollable minting by the owners is not possible.
+     *
+     * @param _to tokens will be sent to this address
+     * @param _amount amount of tokens to mint
+     *
+     * This function is callable only by the controller, see super function.
+     */
+    function mint(address _to, uint256 _amount) public {
+        totalMinted = totalMinted.add(_amount);
+        require(totalMinted <= MAX_SUPPLY);
+        super.mint(_to, _amount);
+    }
+
 
     // ADMINISTRATIVE FUNCTIONS
 
-    function startCirculation() external onlyController returns (bool) {
+    /**
+     * @notice Allows transfers of the token.
+     */
+    function startCirculation() external onlymanyowners(keccak256(msg.data)) returns (bool) {
         return enableCirculation();
     }
+
+
+    // FIELDS
+
+    uint public totalMinted;
 
 
     // CONSTANTS
@@ -93,4 +115,6 @@ contract SmartzToken is CirculatingToken, MintableMultiownedToken {
     string public constant name = "Smartz token";
     string public constant symbol = "SMR";
     uint8 public constant decimals = 18;
+
+    uint public constant MAX_SUPPLY = uint(150) * uint(1000000) * uint(10) ** uint(decimals);
 }
