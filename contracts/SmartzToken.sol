@@ -28,6 +28,11 @@ interface IApprovalRecipient {
 }
 
 
+/**
+ * @title Smartz project token.
+ *
+ * Standard ERC20 token plus logic to support token freezing for crowdsales.
+ */
 contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
 
     /// @title Unit of frozen tokens - tokens which can't be spent until certain conditions is met.
@@ -87,7 +92,7 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         Transfer(address(0), msg.sender, totalSupply);
     }
 
-    /// @notice version of balanceOf which includes all frozen tokens
+    /// @notice Version of balanceOf which includes all frozen tokens.
     function balanceOf(address _owner) public view returns (uint256) {
         uint256 balance = balances[_owner];
 
@@ -98,7 +103,7 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         return balance;
     }
 
-    /// @notice version of balanceOf which includes only currently spendable tokens
+    /// @notice Version of balanceOf which includes only currently spendable tokens.
     function availableBalanceOf(address _owner) public view returns (uint256) {
         uint256 balance = balances[_owner];
 
@@ -108,6 +113,26 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         }
 
         return balance;
+    }
+
+    /// @notice Standard transfer overridden to have a chance to thaw sender's tokens.
+    function transfer(address _to, uint256 _value)
+        public
+        payloadSizeIs(2 * 32)
+        returns (bool)
+    {
+        thawSomeTokens(msg.sender, _value);
+        return super.transfer(_to, _value);
+    }
+
+    /// @notice Standard transferFrom overridden to have a chance to thaw sender's tokens.
+    function transferFrom(address _from, address _to, uint256 _value)
+        public
+        payloadSizeIs(3 * 32)
+        returns (bool)
+    {
+        thawSomeTokens(_from, _value);
+        return super.transferFrom(_from, _to, _value);
     }
 
     /**
@@ -239,6 +264,7 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         assert(cellIndex <= frozenBalances[owner].length);
     }
 
+    /// @dev Says if the given cell could be spent now
     function isSpendableFrozenCell(address owner, uint cellIndex)
         private
         view
@@ -248,10 +274,34 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         if (uint(cell.thawTS) > getTime())
             return false;
 
+        if (0 == cell.amount)   // already spent
+            return false;
+
         if (cell.isKYCRequired != uint128(0) && !m_KYCProvider.isKYCPassed(owner))
             return false;
 
         return true;
+    }
+
+    /// @dev Thaws tokens of owner until enough tokens could be spent or no more such tokens found.
+    function thawSomeTokens(address owner, uint requiredAmount)
+        private
+    {
+        if (balances[owner] >= requiredAmount)
+            return;     // fast path
+
+        // Checking that our goal is reachable before issuing expensive storage modifications.
+        require(availableBalanceOf(owner) >= requiredAmount);
+
+        for (uint cellIndex = 0; cellIndex < frozenBalances[owner].length; ++cellIndex) {
+            if (isSpendableFrozenCell(owner, cellIndex)) {
+                uint amount = frozenBalances[owner][cellIndex].amount;
+                frozenBalances[owner][cellIndex].amount = 0;
+                balances[owner] = balances[owner].add(amount);
+            }
+        }
+
+        assert(balances[owner] >= requiredAmount);
     }
 
     /// @dev to be overridden in tests
