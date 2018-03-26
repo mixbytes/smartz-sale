@@ -1,7 +1,7 @@
 pragma solidity 0.4.18;
 
-import 'mixbytes-solidity/contracts/token/CirculatingToken.sol';
-import 'mixbytes-solidity/contracts/token/MintableMultiownedToken.sol';
+import 'zeppelin-solidity/contracts/token/StandardToken.sol';
+import 'mixbytes-solidity/contracts/ownership/multiowned.sol';
 
 
 /// @title Utility interface for approveAndCall token function.
@@ -20,7 +20,7 @@ interface IApprovalRecipient {
 }
 
 
-contract SmartzToken is CirculatingToken, MintableMultiownedToken {
+contract SmartzToken is multiowned, StandardToken {
 
     event Burn(address indexed from, uint256 amount);
 
@@ -34,13 +34,17 @@ contract SmartzToken is CirculatingToken, MintableMultiownedToken {
      * @param _signaturesRequired quorum of multi-signatures
      *
      * Initial owners have power over the token contract only during bootstrap phase (early investments and token
-     * sales). After final token sale any control over the token removed by issuing detachControllerForever call.
+     * sales). To be precise, the owners can set KYC provider and sales (which can freeze transfered tokens) during
+     * bootstrap phase. After final token sale any control over the token removed by issuing detachOwners call.
      * For lifecycle example please see test/SmartzTokenTest.js, 'test full lifecycle'.
      */
     function SmartzToken(address[] _initialOwners, uint _signaturesRequired)
         public
-        MintableMultiownedToken(_initialOwners, _signaturesRequired, address(0))
+        multiowned(_initialOwners, _signaturesRequired)
     {
+        totalSupply = MAX_SUPPLY;
+        balances[msg.sender] = totalSupply;
+        Transfer(address(0), msg.sender, totalSupply);
     }
 
     /**
@@ -80,34 +84,15 @@ contract SmartzToken is CirculatingToken, MintableMultiownedToken {
         IApprovalRecipient(_spender).receiveApproval(msg.sender, _value, _extraData);
     }
 
-    /**
-     * @notice Wrapper over standard mint() that makes sure uncontrollable minting by the owners is not possible.
-     *
-     * @param _to tokens will be sent to this address
-     * @param _amount amount of tokens to mint
-     *
-     * This function is callable only by the controller, see super function.
-     */
-    function mint(address _to, uint256 _amount) public {
-        totalMinted = totalMinted.add(_amount);
-        require(totalMinted <= MAX_SUPPLY);
-        super.mint(_to, _amount);
-    }
-
 
     // ADMINISTRATIVE FUNCTIONS
 
-    /**
-     * @notice Allows transfers of the token.
-     */
-    function startCirculation() external onlymanyowners(keccak256(msg.data)) returns (bool) {
-        return enableCirculation();
-    }
+
 
 
     // FIELDS
 
-    uint public totalMinted;
+
 
 
     // CONSTANTS
