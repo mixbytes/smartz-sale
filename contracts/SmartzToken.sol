@@ -69,6 +69,11 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         assert(balanceOf(from).add(balanceOf(to)) == initial);
     }
 
+    modifier privilegedAllowed {
+        require(m_allowPrivileged);
+        _;
+    }
+
 
     // PUBLIC FUNCTIONS
 
@@ -183,6 +188,7 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
     function setKYCProvider(address KYCProvider)
         external
         validAddress(KYCProvider)
+        privilegedAllowed
         onlymanyowners(keccak256(msg.data))
     {
         m_KYCProvider = IKYCProvider(KYCProvider);
@@ -192,6 +198,7 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
     function setSale(address account, bool isSale)
         external
         validAddress(account)
+        privilegedAllowed
         onlymanyowners(keccak256(msg.data))
     {
         m_sales[account] = isSale;
@@ -204,6 +211,7 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         validAddress(_to)
         validUnixTS(thawTS)
         payloadSizeIs(4 * 32)
+        privilegedAllowed
         onlySale(msg.sender)
         //checkTransferInvariant(msg.sender, _to) too many local variables - compiler fails
         returns (bool)
@@ -211,7 +219,7 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         require(_value <= balances[msg.sender]);
 
         uint128 thawTSEncoded = uint128(thawTS);
-        uint128 isKYCRequiredEncoded = isKYCRequired ? uint128(1) : uint128(0);
+        uint128 isKYCRequiredEncoded = encodeKYCFlag(isKYCRequired);
 
         uint cellIndex = findFrozenCell(_to, thawTSEncoded, isKYCRequiredEncoded);
         FrozenCell storage targetCell = frozenBalances[_to][cellIndex];
@@ -233,6 +241,43 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         Transfer(msg.sender, _to, _value);
 
         return true;
+    }
+
+    /// @notice Transfers frozen tokens back.
+    function frozenTransferFrom(address _from, address _to, uint256 _value, uint thawTS, bool isKYCRequired)
+        external
+        validAddress(_to)
+        validUnixTS(thawTS)
+        payloadSizeIs(5 * 32)
+        privilegedAllowed
+        //onlySale(msg.sender) too many local variables - compiler fails
+        //onlySale(_to)
+        returns (bool)
+    {
+        require(isSale(msg.sender) && isSale(_to));
+        require(_value <= allowed[_from][msg.sender]);
+
+        uint cellIndex = findFrozenCell(_from, uint128(thawTS), encodeKYCFlag(isKYCRequired));
+        require(cellIndex != frozenBalances[_from].length);   // has to be found
+
+        FrozenCell storage cell = frozenBalances[_from][cellIndex];
+        require(cell.amount >= _value);
+
+        cell.amount = cell.amount.sub(_value);
+        balances[_to] = balances[_to].add(_value);
+        allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
+        Transfer(_from, _to, _value);
+
+        return true;
+    }
+
+    /// @notice Disables further use of any privileged functions like freezing tokens.
+    function disablePrivileged()
+        external
+        privilegedAllowed
+        onlymanyowners(keccak256(msg.data))
+    {
+        m_allowPrivileged = false;
     }
 
 
@@ -277,7 +322,7 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         if (0 == cell.amount)   // already spent
             return false;
 
-        if (cell.isKYCRequired != uint128(0) && !m_KYCProvider.isKYCPassed(owner))
+        if (decodeKYCFlag(cell.isKYCRequired) && !m_KYCProvider.isKYCPassed(owner))
             return false;
 
         return true;
@@ -309,6 +354,14 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         return now;
     }
 
+    function encodeKYCFlag(bool isKYCRequired) private pure returns (uint128) {
+        return isKYCRequired ? uint128(1) : uint128(0);
+    }
+
+    function decodeKYCFlag(uint128 isKYCRequired) private pure returns (bool) {
+        return isKYCRequired != uint128(0);
+    }
+
 
     // FIELDS
 
@@ -320,6 +373,9 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
 
     /// @notice frozen tokens
     mapping (address => FrozenCell[]) public frozenBalances;
+
+    /// @notice allows privileged functions (token sale phase)
+    bool public m_allowPrivileged = true;
 
 
     // CONSTANTS
