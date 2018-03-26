@@ -85,7 +85,7 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
      *
      * Initial owners have power over the token contract only during bootstrap phase (early investments and token
      * sales). To be precise, the owners can set KYC provider and sales (which can freeze transfered tokens) during
-     * bootstrap phase. After final token sale any control over the token removed by issuing detachOwners call.
+     * bootstrap phase. After final token sale any control over the token removed by issuing disablePrivileged call.
      * For lifecycle example please see test/SmartzTokenTest.js, 'test full lifecycle'.
      */
     function SmartzToken(address[] _initialOwners, uint _signaturesRequired)
@@ -222,17 +222,18 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         uint128 isKYCRequiredEncoded = encodeKYCFlag(isKYCRequired);
 
         uint cellIndex = findFrozenCell(_to, thawTSEncoded, isKYCRequiredEncoded);
-        FrozenCell storage targetCell = frozenBalances[_to][cellIndex];
 
         // In case cell is not found - creating new.
         if (cellIndex == frozenBalances[_to].length) {
             frozenBalances[_to].length++;
+            targetCell = frozenBalances[_to][cellIndex];
             assert(0 == targetCell.amount);
 
             targetCell.thawTS = thawTSEncoded;
             targetCell.isKYCRequired = isKYCRequiredEncoded;
         }
 
+        FrozenCell storage targetCell = frozenBalances[_to][cellIndex];
         assert(targetCell.thawTS == thawTSEncoded && targetCell.isKYCRequired == isKYCRequiredEncoded);
 
         // performing transfer
