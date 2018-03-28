@@ -63,9 +63,9 @@ contract('SmartzTokenTest', function(accounts) {
         const owner1 = accounts[0];
         const owner2 = accounts[1];
         const owner3 = accounts[2];
-        const investor1 = accounts[2];  // owner receives some tokens case
-        const investor2 = accounts[3];
-        const investor3 = accounts[4];
+        const holder1 = accounts[2];  // owner receives some tokens case
+        const holder2 = accounts[3];
+        const holder3 = accounts[4];
         const ico = accounts[5];
         const nobody = accounts[6];
 
@@ -84,66 +84,66 @@ contract('SmartzTokenTest', function(accounts) {
         await token.setSale(owner1, true, {from: owner2});  // 2nd signature
 
         // early investment
-        await token.frozenTransfer(investor2, SMTZ(40), 1560000000, false, {from: owner1});
-        assertBigNumberEqual(await token.balanceOf(investor2), SMTZ(40));
-        assertBigNumberEqual(await token.availableBalanceOf(investor2), SMTZ(0));
-        await expectThrow(token.transfer(nobody, SMTZ(1), {from: investor2}));  // can't sell yet
+        await token.frozenTransfer(holder2, SMTZ(40), 1560000000, false, {from: owner1});
+        assertBigNumberEqual(await token.balanceOf(holder2), SMTZ(40));
+        assertBigNumberEqual(await token.availableBalanceOf(holder2), SMTZ(0));
+        await expectThrow(token.transfer(nobody, SMTZ(1), {from: holder2}));  // can't sell yet
 
         // ok, now it's ico time
         await token.transfer(ico, SMTZ(1e6), {from: owner1});
         await token.setSale(ico, true, {from: owner1});
         await token.setSale(ico, true, {from: owner2});  // 2nd signature
 
-        // minting by ico to an investor
-        await token.frozenTransfer(investor1, SMTZ(20), 1550000000, true, {from: ico});
-        await KYC.setKYCPassed(investor1);
-        assertBigNumberEqual(await token.balanceOf(investor1), SMTZ(20));
-        assertBigNumberEqual(await token.availableBalanceOf(investor1), SMTZ(0));
+        // minting by ico to an holder
+        await token.frozenTransfer(holder1, SMTZ(20), 1550000000, true, {from: ico});
+        await KYC.setKYCPassed(holder1);
+        assertBigNumberEqual(await token.balanceOf(holder1), SMTZ(20));
+        assertBigNumberEqual(await token.availableBalanceOf(holder1), SMTZ(0));
 
-        await expectThrow(token.transfer(nobody, SMTZ(1), {from: investor1}));  // both investors..
-        await expectThrow(token.transfer(nobody, SMTZ(1), {from: investor2}));  // ..can't sell yet
+        await expectThrow(token.transfer(nobody, SMTZ(1), {from: holder1}));  // both holders..
+        await expectThrow(token.transfer(nobody, SMTZ(1), {from: holder2}));  // ..can't sell yet
 
-        // investor3
-        await token.frozenTransfer(investor3, SMTZ(10), 1550000000, true, {from: ico});
-        assertBigNumberEqual(await token.balanceOf(investor3), SMTZ(10));
-        assertBigNumberEqual(await token.availableBalanceOf(investor3), SMTZ(0));
-        await expectThrow(token.transfer(nobody, SMTZ(1), {from: investor3}));
+        // holder3
+        await token.frozenTransfer(holder3, SMTZ(10), 1550000000, true, {from: ico});
+        assertBigNumberEqual(await token.balanceOf(holder3), SMTZ(10));
+        assertBigNumberEqual(await token.availableBalanceOf(holder3), SMTZ(0));
+        await expectThrow(token.transfer(nobody, SMTZ(1), {from: holder3}));
 
         // ico is over - now transfer is allowed
         await token.setTime(1560000000);
-        await token.transfer(nobody, SMTZ(1), {from: investor1});
-        await token.transfer(nobody, SMTZ(1), {from: investor2});
+        await token.transfer(nobody, SMTZ(1), {from: holder1});
+        await token.transfer(nobody, SMTZ(1), {from: holder2});
         assertBigNumberEqual(await token.balanceOf(nobody), SMTZ(2));
         assertBigNumberEqual(await token.availableBalanceOf(nobody), SMTZ(2));
 
-        assertBigNumberEqual(await token.balanceOf(investor2), SMTZ(39));
-        assertBigNumberEqual(await token.availableBalanceOf(investor2), SMTZ(39));
+        assertBigNumberEqual(await token.balanceOf(holder2), SMTZ(39));
+        assertBigNumberEqual(await token.availableBalanceOf(holder2), SMTZ(39));
 
-        assertBigNumberEqual(await token.balanceOf(investor1), SMTZ(19));
-        assertBigNumberEqual(await token.availableBalanceOf(investor1), SMTZ(19));
+        assertBigNumberEqual(await token.balanceOf(holder1), SMTZ(19));
+        assertBigNumberEqual(await token.availableBalanceOf(holder1), SMTZ(19));
 
         // refund
         // first attempt - not approved
-        await expectThrow(token.frozenTransferFrom(investor3, ico, SMTZ(10), 1550000000, true, {from: ico}));
+        await expectThrow(token.frozenTransferFrom(holder3, ico, SMTZ(10), 1550000000, true, {from: ico}));
 
-        await token.approve(ico, SMTZ(10), {from: investor3});
-        await token.frozenTransferFrom(investor3, ico, SMTZ(10), 1550000000, true, {from: ico});
-        assertBigNumberEqual(await token.balanceOf(investor3), SMTZ(0));
-        assertBigNumberEqual(await token.availableBalanceOf(investor3), SMTZ(0));
-        await expectThrow(token.transfer(nobody, SMTZ(1), {from: investor3}));
+        await token.approve(ico, SMTZ(10), {from: holder3});
+        await token.frozenTransferFrom(holder3, ico, SMTZ(10), 1550000000, true, {from: ico});
+        assertBigNumberEqual(await token.balanceOf(holder3), SMTZ(0));
+        assertBigNumberEqual(await token.availableBalanceOf(holder3), SMTZ(0));
+        await expectThrow(token.transfer(nobody, SMTZ(1), {from: holder3}));
 
         // no more privileged frozen* calls
         await token.disablePrivileged({from: owner1});
         await token.disablePrivileged({from: owner2});  // 2nd signature
 
         // and owners no longer have any power over the token contract
-        await expectThrow(token.frozenTransfer(investor2, SMTZ(40), 1590000000, false, {from: owner1}));
-        await expectThrow(token.frozenTransfer(investor1, SMTZ(20), 1590000000, false, {from: ico}));
+        await expectThrow(token.frozenTransfer(holder2, SMTZ(40), 1590000000, false, {from: owner1}));
+        await expectThrow(token.frozenTransfer(holder1, SMTZ(20), 1590000000, false, {from: ico}));
 
         // totals
         assertBigNumberEqual(await token.totalSupply(), SMTZ(150e6));
         let sum = new web3.BigNumber(0);
-        for (const role of [owner1, owner2, investor1, investor2, investor3, ico, nobody])
+        for (const role of [owner1, owner2, holder1, holder2, holder3, ico, nobody])
             sum = sum.add(await token.availableBalanceOf(role));
         assertBigNumberEqual(sum, SMTZ(150e6));
     });
