@@ -296,32 +296,13 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         payloadSizeIs(4 * 32)
         privilegedAllowed
         onlySale(msg.sender)
-        //checkTransferInvariant(msg.sender, _to) too many local variables - compiler fails
+        checkTransferInvariant(msg.sender, _to)
         returns (bool)
     {
         require(_value <= balances[msg.sender]);
 
-        uint128 thawTSEncoded = uint128(thawTS);
-        uint128 isKYCRequiredEncoded = encodeKYCFlag(isKYCRequired);
-
-        uint cellIndex = findFrozenCell(_to, thawTSEncoded, isKYCRequiredEncoded);
-
-        // In case cell is not found - creating new.
-        if (cellIndex == frozenBalances[_to].length) {
-            frozenBalances[_to].length++;
-            targetCell = frozenBalances[_to][cellIndex];
-            assert(0 == targetCell.amount);
-
-            targetCell.thawTS = thawTSEncoded;
-            targetCell.isKYCRequired = isKYCRequiredEncoded;
-        }
-
-        FrozenCell storage targetCell = frozenBalances[_to][cellIndex];
-        assert(targetCell.thawTS == thawTSEncoded && targetCell.isKYCRequired == isKYCRequiredEncoded);
-
-        // performing transfer
         balances[msg.sender] = balances[msg.sender].sub(_value);
-        targetCell.amount = targetCell.amount.add(_value);
+        addFrozen(_to, _value, thawTS, isKYCRequired);
         Transfer(msg.sender, _to, _value);
 
         return true;
@@ -349,20 +330,15 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         privilegedAllowed
         //onlySale(msg.sender) too many local variables - compiler fails
         //onlySale(_to)
+        checkTransferInvariant(_from, _to)
         returns (bool)
     {
         require(isSale(msg.sender) && isSale(_to));
         require(_value <= allowed[_from][msg.sender]);
 
-        uint cellIndex = findFrozenCell(_from, uint128(thawTS), encodeKYCFlag(isKYCRequired));
-        require(cellIndex != frozenBalances[_from].length);   // has to be found
-
-        FrozenCell storage cell = frozenBalances[_from][cellIndex];
-        require(cell.amount >= _value);
-
-        cell.amount = cell.amount.sub(_value);
-        balances[_to] = balances[_to].add(_value);
         allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
+        subFrozen(_from, _value, thawTS, isKYCRequired);
+        balances[_to] = balances[_to].add(_value);
         Transfer(_from, _to, _value);
 
         return true;
@@ -423,6 +399,47 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
             return false;
 
         return true;
+    }
+
+    /// @dev Internal function to increment or create frozen cell.
+    function addFrozen(address _to, uint256 _value, uint thawTS, bool isKYCRequired)
+        private
+        validAddress(_to)
+        validUnixTS(thawTS)
+    {
+        uint128 thawTSEncoded = uint128(thawTS);
+        uint128 isKYCRequiredEncoded = encodeKYCFlag(isKYCRequired);
+
+        uint cellIndex = findFrozenCell(_to, thawTSEncoded, isKYCRequiredEncoded);
+
+        // In case cell is not found - creating new.
+        if (cellIndex == frozenBalances[_to].length) {
+            frozenBalances[_to].length++;
+            targetCell = frozenBalances[_to][cellIndex];
+            assert(0 == targetCell.amount);
+
+            targetCell.thawTS = thawTSEncoded;
+            targetCell.isKYCRequired = isKYCRequiredEncoded;
+        }
+
+        FrozenCell storage targetCell = frozenBalances[_to][cellIndex];
+        assert(targetCell.thawTS == thawTSEncoded && targetCell.isKYCRequired == isKYCRequiredEncoded);
+
+        targetCell.amount = targetCell.amount.add(_value);
+    }
+
+    /// @dev Internal function to decrement frozen cell.
+    function subFrozen(address _from, uint256 _value, uint thawTS, bool isKYCRequired)
+        private
+        validUnixTS(thawTS)
+    {
+        uint cellIndex = findFrozenCell(_from, uint128(thawTS), encodeKYCFlag(isKYCRequired));
+        require(cellIndex != frozenBalances[_from].length);   // has to be found
+
+        FrozenCell storage cell = frozenBalances[_from][cellIndex];
+        require(cell.amount >= _value);
+
+        cell.amount = cell.amount.sub(_value);
     }
 
     /// @dev Thaws tokens of owner until enough tokens could be spent or no more such tokens found.
