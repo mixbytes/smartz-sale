@@ -180,6 +180,8 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         returns (bool)
     {
         address from = msg.sender;
+        thawSomeTokens(from, _amount);
+        
         require(_amount > 0);
         require(_amount <= balances[from]);
 
