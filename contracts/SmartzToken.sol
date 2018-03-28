@@ -182,6 +182,38 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
     }
 
 
+    // INFORMATIONAL FUNCTIONS (VIEWS)
+
+    /**
+     * @notice Number of frozen cells of an account.
+     *
+     * @param owner account address
+     *
+     * @return number of frozen cells
+     */
+    function frozenCellCount(address owner) public view returns (uint) {
+        return frozenBalances[owner].length;
+    }
+
+    /**
+     * @notice Retrieve information about account frozen tokens.
+     *
+     * @param owner account address
+     * @param index index of so-called frozen cell from 0 (inclusive) up to frozenCellCount(owner) exclusive
+     *
+     * @return amount amount of tokens frozen in this cell
+     * @return thawTS unix timestamp at which tokens'll become available
+     * @return isKYCRequired it's required to pass KYC to spend tokens iff isKYCRequired is true
+     */
+    function frozenCell(address owner, uint index) public view returns (uint amount, uint thawTS, bool isKYCRequired) {
+        require(index < frozenCellCount(owner));
+
+        amount = frozenBalances[owner][index].amount;
+        thawTS = uint(frozenBalances[owner][index].thawTS);
+        isKYCRequired = decodeKYCFlag(frozenBalances[owner][index].isKYCRequired);
+    }
+
+
     // ADMINISTRATIVE FUNCTIONS
 
     /// @notice Sets current KYC provider of the token

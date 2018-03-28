@@ -84,8 +84,7 @@ contract('SmartzTokenTest', function(accounts) {
         await token.setSale(owner1, true, {from: owner2});  // 2nd signature
 
         // early investment
-        await token.frozenTransfer(investor2, SMTZ(40), 1560000000, true, {from: owner1});
-        await KYC.setKYCPassed(investor2);
+        await token.frozenTransfer(investor2, SMTZ(40), 1560000000, false, {from: owner1});
         assertBigNumberEqual(await token.balanceOf(investor2), SMTZ(40));
         assertBigNumberEqual(await token.availableBalanceOf(investor2), SMTZ(0));
         await expectThrow(token.transfer(nobody, SMTZ(1), {from: investor2}));  // can't sell yet
@@ -367,5 +366,60 @@ contract('SmartzTokenTest', function(accounts) {
 
         assertBigNumberEqual(await token.balanceOf(holder3), SMTZ(11));
         assertBigNumberEqual(await token.availableBalanceOf(holder3), SMTZ(11));
+    });
+
+    it('test viewing frozen cells', async function() {
+        const assertCellContent = (cell, amount, ts, isKYC) => {
+            assertBigNumberEqual(cell[0], amount);
+            assertBigNumberEqual(cell[1], ts);
+            assert.equal(cell[2], isKYC);
+        };
+
+        const owner1 = accounts[0];
+        const holder1 = accounts[1];
+
+        const token = await SmartzTokenTestHelper.new([owner1], 1, {from: owner1});
+        await token.setSale(owner1, true, {from: owner1});
+        await token.setTime(1600000001);
+
+        // holder1 <- 5 (thaw = 1600000005, KYC = false)
+        assertBigNumberEqual(await token.frozenCellCount(holder1), 0);
+
+        await token.frozenTransfer(holder1, SMTZ(5), 1600000005, false, {from: owner1});
+        assertBigNumberEqual(await token.balanceOf(holder1), SMTZ(5));
+        assertBigNumberEqual(await token.availableBalanceOf(holder1), SMTZ(0));
+
+        assertBigNumberEqual(await token.frozenCellCount(holder1), 1);
+        assertCellContent(await token.frozenCell(holder1, 0), SMTZ(5), 1600000005, false);
+
+        // holder1 <- 7 (thaw = 1600000005, KYC = true)
+        await token.frozenTransfer(holder1, SMTZ(7), 1600000005, true, {from: owner1});
+        assertBigNumberEqual(await token.balanceOf(holder1), SMTZ(12));
+        assertBigNumberEqual(await token.availableBalanceOf(holder1), SMTZ(0));
+
+        assertBigNumberEqual(await token.frozenCellCount(holder1), 2);
+        assertCellContent(await token.frozenCell(holder1, 0), SMTZ(5), 1600000005, false);
+        assertCellContent(await token.frozenCell(holder1, 1), SMTZ(7), 1600000005, true);
+
+
+        await token.setTime(1600000002);
+
+        // holder1 <- 1 (thaw = 1600000005, KYC = false)
+        await token.frozenTransfer(holder1, SMTZ(1), 1600000005, false, {from: owner1});
+        assertBigNumberEqual(await token.balanceOf(holder1), SMTZ(13));
+        assertBigNumberEqual(await token.availableBalanceOf(holder1), SMTZ(0));
+
+        assertBigNumberEqual(await token.frozenCellCount(holder1), 2);
+        assertCellContent(await token.frozenCell(holder1, 0), SMTZ(6), 1600000005, false);
+        assertCellContent(await token.frozenCell(holder1, 1), SMTZ(7), 1600000005, true);
+
+        // holder1 <- 2 (thaw = 1600000005, KYC = true)
+        await token.frozenTransfer(holder1, SMTZ(2), 1600000005, true, {from: owner1});
+        assertBigNumberEqual(await token.balanceOf(holder1), SMTZ(15));
+        assertBigNumberEqual(await token.availableBalanceOf(holder1), SMTZ(0));
+
+        assertBigNumberEqual(await token.frozenCellCount(holder1), 2);
+        assertCellContent(await token.frozenCell(holder1, 0), SMTZ(6), 1600000005, false);
+        assertCellContent(await token.frozenCell(holder1, 1), SMTZ(9), 1600000005, true);
     });
 });
