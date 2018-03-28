@@ -31,7 +31,7 @@ interface IApprovalRecipient {
 /**
  * @title Smartz project token.
  *
- * Standard ERC20 token plus logic to support token freezing for crowdsales.
+ * Standard ERC20 burnable token plus logic to support token freezing for crowdsales.
  */
 contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
 
@@ -97,7 +97,13 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         Transfer(address(0), msg.sender, totalSupply);
     }
 
-    /// @notice Version of balanceOf which includes all frozen tokens.
+    /**
+     * @notice Version of balanceOf() which includes all frozen tokens.
+     *
+     * @param _owner the address to query the balance of
+     *
+     * @return an uint256 representing the amount owned by the passed address
+     */
     function balanceOf(address _owner) public view returns (uint256) {
         uint256 balance = balances[_owner];
 
@@ -108,7 +114,13 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         return balance;
     }
 
-    /// @notice Version of balanceOf which includes only currently spendable tokens.
+    /**
+     * @notice Version of balanceOf() which includes only currently spendable tokens.
+     *
+     * @param _owner the address to query the balance of
+     *
+     * @return an uint256 representing the amount spendable by the passed address
+     */
     function availableBalanceOf(address _owner) public view returns (uint256) {
         uint256 balance = balances[_owner];
 
@@ -120,7 +132,14 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         return balance;
     }
 
-    /// @notice Standard transfer overridden to have a chance to thaw sender's tokens.
+    /**
+     * @notice Standard transfer() overridden to have a chance to thaw sender's tokens.
+     *
+     * @param _to the address to transfer to
+     * @param _value the amount to be transferred
+     *
+     * @return true iff operation was successfully completed
+     */
     function transfer(address _to, uint256 _value)
         public
         payloadSizeIs(2 * 32)
@@ -130,7 +149,15 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         return super.transfer(_to, _value);
     }
 
-    /// @notice Standard transferFrom overridden to have a chance to thaw sender's tokens.
+    /**
+     * @notice Standard transferFrom overridden to have a chance to thaw sender's tokens.
+     *
+     * @param _from address the address which you want to send tokens from
+     * @param _to address the address which you want to transfer to
+     * @param _value uint256 the amount of tokens to be transferred
+     *
+     * @return true iff operation was successfully completed
+     */
     function transferFrom(address _from, address _to, uint256 _value)
         public
         payloadSizeIs(3 * 32)
@@ -143,9 +170,9 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
     /**
      * Function to burn msg.sender's tokens.
      *
-     * @param _amount The amount of tokens to burn
+     * @param _amount amount of tokens to burn
      *
-     * @return A boolean that indicates if the operation was successful.
+     * @return boolean that indicates if the operation was successful
      */
     function burn(uint256 _amount)
         public
@@ -196,7 +223,7 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
     }
 
     /**
-     * @notice Retrieve information about account frozen tokens.
+     * @notice Retrieves information about account frozen tokens.
      *
      * @param owner account address
      * @param index index of so-called frozen cell from 0 (inclusive) up to frozenCellCount(owner) exclusive
@@ -216,7 +243,13 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
 
     // ADMINISTRATIVE FUNCTIONS
 
-    /// @notice Sets current KYC provider of the token
+    /**
+     * @notice Sets current KYC provider of the token.
+     *
+     * @param KYCProvider address of the IKYCProvider-compatible contract
+     *
+     * Function is used only during token sale phase, before disablePrivileged() is called.
+     */
     function setKYCProvider(address KYCProvider)
         external
         validAddress(KYCProvider)
@@ -226,7 +259,14 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         m_KYCProvider = IKYCProvider(KYCProvider);
     }
 
-    /// @notice Sets sale status of an accounts
+    /**
+     * @notice Sets sale status of an account.
+     *
+     * @param account account address
+     * @param isSale is this account has access to frozen* functions
+     *
+     * Function is used only during token sale phase, before disablePrivileged() is called.
+     */
     function setSale(address account, bool isSale)
         external
         validAddress(account)
@@ -237,7 +277,16 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
     }
 
 
-    /// @notice Transfers tokens to a recipient and freezes it
+    /**
+     * @notice Transfers tokens to a recipient and freezes it.
+     *
+     * @param _to account to which tokens are sent
+     * @param _value amount of tokens to send
+     * @param thawTS unix timestamp at which tokens'll become available
+     * @param isKYCRequired it's required to pass KYC to spend tokens iff isKYCRequired is true
+     *
+     * Function is used only during token sale phase and available only to sale accounts.
+     */
     function frozenTransfer(address _to, uint256 _value, uint thawTS, bool isKYCRequired)
         external
         validAddress(_to)
@@ -276,7 +325,20 @@ contract SmartzToken is ArgumentsChecker, multiowned, StandardToken {
         return true;
     }
 
-    /// @notice Transfers frozen tokens back.
+    /**
+     * @notice Transfers frozen tokens back.
+     *
+     * @param _from account to send tokens from
+     * @param _to account to which tokens are sent
+     * @param _value amount of tokens to send
+     * @param thawTS unix timestamp at which tokens'll become available
+     * @param isKYCRequired it's required to pass KYC to spend tokens iff isKYCRequired is true
+     *
+     * Function is used only during token sale phase to make a refunds and available only to sale accounts.
+     * _from account has to explicitly approve spending with the approve() call.
+     * thawTS and isKYCRequired parameters are required to withdraw exact "same" tokens (to not affect availability of
+     * other tokens of the account).
+     */
     function frozenTransferFrom(address _from, address _to, uint256 _value, uint thawTS, bool isKYCRequired)
         external
         validAddress(_to)
