@@ -88,5 +88,5 @@ contract SMRDistributionVault is ArgumentsChecker, multiowned, ERC20 {
     // CONSTANTS
 
     string public constant name = "SMRDistributionVault";
-    string public constant symbol = "SMRDW";
+    string public constant symbol = "SMRDV";
 }
