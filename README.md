@@ -1,6 +1,6 @@
 # smartz-sale
 
-[![Build Status](https://travis-ci.com/mixbytes/smartz-sale.svg?token=WJFiF9VyzysQZDSvhqd5&branch=master)](https://travis-ci.com/mixbytes/smartz-sale)
+[![Build Status](https://api.travis-ci.org/mixbytes/smartz-sale.svg?branch=master)](https://travis-ci.com/mixbytes/smartz-sale)
 
 [Smartz](https://smartz.io) token & sale contracts.
 
