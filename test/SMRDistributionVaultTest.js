@@ -20,11 +20,11 @@ function getRoles(accounts) {
     };
 }
 
-async function instantiate(role) {
+async function instantiate(role, requiredSignatures=1) {
     const token = await SmartzTokenTestHelper.new([role.owner1], 1, {from: role.owner1});
     await token.setTime(1600000000);
 
-    const vault = await SMRDistributionVault.new([role.owner2, role.owner3], token.address, 1600000010, {from: role.nobody});
+    const vault = await SMRDistributionVault.new([role.owner2, role.owner3], requiredSignatures, token.address, 1600000010, {from: role.nobody});
     await token.setSale(vault.address, true, {from: role.owner1});  // needs special status to freeze tokens!
     await token.transfer(vault.address, SMR(1000), {from: role.owner1});
 
@@ -146,5 +146,43 @@ contract('SMRDistributionVaultTest', function(accounts) {
         await vault.withdrawRemaining(role.owner3, {from: role.owner3});
         assertBigNumberEqual(await token.balanceOf(role.owner3), SMR(850));
         assertBigNumberEqual(await token.availableBalanceOf(role.owner3), SMR(850));    // not frozen!
+    });
+
+    it('test with multisig', async function() {
+        const role = getRoles(accounts);
+        const [token, vault] = await instantiate(role, 2);
+
+        assertBigNumberEqual(await token.balanceOf(vault.address), SMR(1000));
+        assertBigNumberEqual(await token.availableBalanceOf(vault.address), SMR(1000));
+
+        // transfer from vault by owner2 - first signature!
+        await vault.transfer(role.holder1, SMR(100), {from: role.owner2});
+        assertBigNumberEqual(await token.balanceOf(role.holder1), SMR(0));
+        assertBigNumberEqual(await token.availableBalanceOf(role.holder1), SMR(0));
+
+        assertBigNumberEqual(await token.balanceOf(vault.address), SMR(1000));
+        assertBigNumberEqual(await token.availableBalanceOf(vault.address), SMR(1000));
+
+        // transfer from vault by owner2 - second signature - transfer must happen!
+        await vault.transfer(role.holder1, SMR(100), {from: role.owner3});
+        assertBigNumberEqual(await token.balanceOf(role.holder1), SMR(100));
+        assertBigNumberEqual(await token.availableBalanceOf(role.holder1), SMR(0)); // frozen!
+
+        assertBigNumberEqual(await token.balanceOf(vault.address), SMR(900));
+        assertBigNumberEqual(await token.availableBalanceOf(vault.address), SMR(900));
+
+        // withdrawRemaining
+
+        await vault.withdrawRemaining(role.owner3, {from: role.owner3});
+        assertBigNumberEqual(await token.balanceOf(vault.address), SMR(900));
+        assertBigNumberEqual(await token.availableBalanceOf(vault.address), SMR(900));
+        assertBigNumberEqual(await token.balanceOf(role.owner3), SMR(0));
+        assertBigNumberEqual(await token.availableBalanceOf(role.owner3), SMR(0));
+
+        await vault.withdrawRemaining(role.owner3, {from: role.owner2});
+        assertBigNumberEqual(await token.balanceOf(vault.address), SMR(0));
+        assertBigNumberEqual(await token.availableBalanceOf(vault.address), SMR(0));
+        assertBigNumberEqual(await token.balanceOf(role.owner3), SMR(900));
+        assertBigNumberEqual(await token.availableBalanceOf(role.owner3), SMR(900));    // not frozen!
     });
 });

@@ -17,9 +17,9 @@ contract SMRDistributionVault is multiowned, ERC20 {
 
     // PUBLIC FUNCTIONS
 
-    function SMRDistributionVault(address[] _initialOwners, address SMR, uint thawTS)
+    function SMRDistributionVault(address[] _initialOwners, uint _signaturesRequired, address SMR, uint thawTS)
         public
-        multiowned(_initialOwners, 1)
+        multiowned(_initialOwners, _signaturesRequired)
     {
         m_SMR = ISmartzToken(SMR);
         m_thawTS = thawTS;
@@ -37,7 +37,7 @@ contract SMRDistributionVault is multiowned, ERC20 {
     /// @notice Looks like transfer of this token, but actually frozenTransfers SMR.
     function transfer(address to, uint256 value)
         public
-        onlyowner
+        onlymanyowners(keccak256(msg.data))
         returns (bool)
     {
         return m_SMR.frozenTransfer(to, value, m_thawTS, false);
@@ -46,7 +46,7 @@ contract SMRDistributionVault is multiowned, ERC20 {
     /// @notice Transfers using plain transfer remaining tokens.
     function withdrawRemaining(address to)
         external
-        onlyowner
+        onlymanyowners(keccak256(msg.data))
         returns (bool)
     {
         return m_SMR.transfer(to, m_SMR.balanceOf(this));
