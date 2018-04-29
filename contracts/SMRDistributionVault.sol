@@ -3,7 +3,6 @@ pragma solidity 0.4.18;
 import 'zeppelin-solidity/contracts/token/ERC20.sol';
 
 import 'mixbytes-solidity/contracts/ownership/multiowned.sol';
-import 'mixbytes-solidity/contracts/security/ArgumentsChecker.sol';
 
 import './ISmartzToken.sol';
 
@@ -13,7 +12,7 @@ import './ISmartzToken.sol';
  *
  * The idea is that this vault simulates ERC20 token, but under the hood issues SMR frozenTransfer.
  */
-contract SMRDistributionVault is ArgumentsChecker, multiowned, ERC20 {
+contract SMRDistributionVault is multiowned, ERC20 {
 
 
     // PUBLIC FUNCTIONS
@@ -38,7 +37,6 @@ contract SMRDistributionVault is ArgumentsChecker, multiowned, ERC20 {
     /// @notice Looks like transfer of this token, but actually frozenTransfers SMR.
     function transfer(address to, uint256 value)
         public
-        payloadSizeIs(2 * 32)
         onlyowner
         returns (bool)
     {
@@ -48,7 +46,6 @@ contract SMRDistributionVault is ArgumentsChecker, multiowned, ERC20 {
     /// @notice Transfers using plain transfer remaining tokens.
     function withdrawRemaining(address to)
         external
-        payloadSizeIs(1 * 32)
         onlyowner
         returns (bool)
     {
