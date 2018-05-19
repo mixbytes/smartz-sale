@@ -126,7 +126,6 @@ contract SmartzToken is ArgumentsChecker, multiowned, BurnableToken, StandardTok
      */
     function transfer(address _to, uint256 _value)
         public
-        payloadSizeIs(2 * 32)
         returns (bool)
     {
         thawSomeTokens(msg.sender, _value);
@@ -144,7 +143,6 @@ contract SmartzToken is ArgumentsChecker, multiowned, BurnableToken, StandardTok
      */
     function transferFrom(address _from, address _to, uint256 _value)
         public
-        payloadSizeIs(3 * 32)
         returns (bool)
     {
         thawSomeTokens(_from, _value);
@@ -160,7 +158,6 @@ contract SmartzToken is ArgumentsChecker, multiowned, BurnableToken, StandardTok
      */
     function burn(uint256 _amount)
         public
-        payloadSizeIs(1 * 32)
         returns (bool)
     {
         thawSomeTokens(msg.sender, _amount);
@@ -250,7 +247,6 @@ contract SmartzToken is ArgumentsChecker, multiowned, BurnableToken, StandardTok
         external
         validAddress(_to)
         validUnixTS(thawTS)
-        payloadSizeIs(4 * 32)
         privilegedAllowed
         onlySale(msg.sender)
         checkTransferInvariant(msg.sender, _to)
@@ -283,7 +279,6 @@ contract SmartzToken is ArgumentsChecker, multiowned, BurnableToken, StandardTok
         external
         validAddress(_to)
         validUnixTS(thawTS)
-        payloadSizeIs(5 * 32)
         privilegedAllowed
         //onlySale(msg.sender) too many local variables - compiler fails
         //onlySale(_to)
